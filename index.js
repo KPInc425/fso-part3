@@ -61,9 +61,23 @@ const generateID = () => {
 app.post('/api/persons', (request, response) => {
   const body = request.body;
 
-  if (!body) {
+  console.log(body);
+
+  if (!body.name) {
     return response.status(400).json({
-      error: 'content missing'
+      error: 'Name missing'
+    })
+  }
+
+  if (!body.number) {
+    return response.status(400).json({
+      error: 'Number missing'
+    })
+  }
+
+  if (persons.find(persons => persons.name === body.name)) {
+    return response.json({
+      error: 'There is already a person with that name in the phonebook'
     })
   }
 
