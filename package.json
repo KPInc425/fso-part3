@@ -1,0 +1,27 @@
+{
+  "name": "fso-part3",
+  "version": "0.0.1",
+  "description": "FSO Part 3 Exercises",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KPInc425/fso-part3.git"
+  },
+  "author": "KPInc425",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/KPInc425/fso-part3/issues"
+  },
+  "homepage": "https://github.com/KPInc425/fso-part3#readme",
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.20"
+  }
+}
