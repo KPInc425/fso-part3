@@ -1,0 +1,7 @@
+PUT http://localhost:3005/api/persons/638e670beec46331d3b81911
+Content-Type: application/json
+
+{
+    "name": "KP Rules",
+    "number": "42069420"
+}

@@ -1,52 +1,24 @@
-require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
 const app = express();
-const morgan = require('morgan');
-
+const cors = require('cors');
+require('dotenv').config();
 const PhoneBookEntry = require('./models/phoneNumberEntry.js');
 
-// morgan.token('personName', function (req, res) {
-//   console.log(req);
-//   return req.body.name;
-// })
-morgan.token('body', function (req, res) {
-  // console.log(req, res);
-  if (req.body.name){
-    return JSON.stringify(req.body);
+const requestLogger = (request, response, next) => {
+    console.log(request);
+    console.log('Method: ', request.method);
+    console.log('Path: ', request.path);
+    console.log('Body: ', request.body);
+    console.log('---');
+    next();
+}
 
-  } else {
-    return "";
-  }
-})
-
-app.use(express.static('build'));
-app.use(cors());
 app.use(express.json());
-app.use(morgan(`:method :url :status :res[content-length] - :response-time ms :body`)); //:method :url :status :res[content-length] - :response-time ms { name: :personName, number: :number'));
 
-// let persons = [
-//     { 
-//       "id": 1,
-//       "name": "Arto Hellas", 
-//       "number": "040-123456"
-//     },
-//     { 
-//       "id": 2,
-//       "name": "Ada Lovelace", 
-//       "number": "39-44-5323523"
-//     },
-//     { 
-//       "id": 3,
-//       "name": "Dan Abramov", 
-//       "number": "12-43-234345"
-//     },
-//     { 
-//       "id": 4,
-//       "name": "Mary Poppendieck", 
-//       "number": "39-23-6423122"
-//     }
-// ];
+app.use(requestLogger);
+app.use(cors());
+app.use(express.static('build'));
+
 
 app.get('/api/persons', (request, response) => {
     PhoneBookEntry.find({}).then((person) => {
@@ -54,8 +26,16 @@ app.get('/api/persons', (request, response) => {
     })
 })
 
-app.get('/info', (request, response) => {
-    response.send(`<p>Phonebook has info for ${persons.length} people</p>
+app.get('/info', async (request, response) => {
+    // console.log(PhoneBookEntry);
+
+    const count = await PhoneBookEntry.countDocuments({}).then((request, response) => {
+      console.log(request);
+
+      return request;
+    })
+
+    response.send(`<p>Phonebook has info for ${ count } people</p>
                    <p> ${ new Date()} </p>`);
 })
 
@@ -63,21 +43,14 @@ app.get('/api/persons/:id', (request, response) => {
     PhoneBookEntry.findById(request.params.id).then((person) => {
         response.json(person);
     })
-    // const id = Number(request.params.id);
-    // const person = persons.find(person => person.id === id);
-
-    // if (person) {
-    //     response.json(person);
-    // } else {
-    //     response.status(404).end();
-    // }
 })
 
 app.delete('/api/persons/:id', (request, response) => {
-    const id = Number(request.params.id);
-    persons = persons.filter(person => person.id !== id);
-
-    response.status(204).end();
+    PhoneBookEntry.findByIdAndRemove(request.params.id)
+      .then((result) => {
+        response.status(204).end()
+      })
+      .catch((error) => next(error));
 })
 
 const generateID = () => {
@@ -102,11 +75,6 @@ app.post('/api/persons', (request, response) => {
     })
   }
 
-  // if (persons.find(persons => persons.name === body.name)) {
-  //   return response.json({
-  //     error: 'There is already a person with that name in the phonebook'
-  //   })
-  // }
 
   const newPerson = new PhoneBookEntry({
     id: generateID(),
@@ -114,14 +82,44 @@ app.post('/api/persons', (request, response) => {
     number: body.number,
   })
 
-  // persons = persons.concat(newPerson);
+
 
   newPerson.save().then((savedEntry) => {
     response.json(savedEntry);
   })
-
-
 })
+
+app.put('/api/persons/:id', (request, response, next) => {
+  const body = request.body;
+  const phoneNumber = {
+    name: body.name,
+    number: body.number,
+  }
+
+  PhoneBookEntry.findByIdAndUpdate(request.params.id, phoneNumber, { new: true })
+    .then(updatedNumber => {
+      response.json(updatedNumber);
+    })
+    .catch((error) => next(error));
+}) 
+
+const unknownEndPoint = (request, response) => {
+    response.status(404).send({ error: 'unknown endpoint' });
+}
+
+app.use(unknownEndPoint);
+
+const errorHandler = (error, request, response, next) => {
+    console.error(error.message);
+
+    if (error.name === 'CastError') {
+        return response.status(400).send({ error: 'malformatted id' });
+    }
+
+    next(error);
+}
+
+app.use(errorHandler);
 
 const PORT = 3005;
 
