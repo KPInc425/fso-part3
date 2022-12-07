@@ -2,7 +2,7 @@ const express = require('express');
 const app = express();
 const cors = require('cors');
 require('dotenv').config();
-const PhoneBookEntry = require('./models/phoneNumberEntry.js');
+const phoneNumberEntry = require('./models/phoneNumberEntry.js');
 
 const requestLogger = (request, response, next) => {
     console.log(request);
@@ -21,15 +21,15 @@ app.use(express.static('build'));
 
 
 app.get('/api/persons', (request, response) => {
-    PhoneBookEntry.find({}).then((person) => {
+    phoneNumberEntry.find({}).then((person) => {
       response.json(person);
     })
 })
 
 app.get('/info', async (request, response) => {
-    // console.log(PhoneBookEntry);
+    // console.log(phoneNumberEntry);
 
-    const count = await PhoneBookEntry.countDocuments({}).then((request, response) => {
+    const count = await phoneNumberEntry.countDocuments({}).then((request, response) => {
       console.log(request);
 
       return request;
@@ -40,13 +40,13 @@ app.get('/info', async (request, response) => {
 })
 
 app.get('/api/persons/:id', (request, response) => {
-    PhoneBookEntry.findById(request.params.id).then((person) => {
+    phoneNumberEntry.findById(request.params.id).then((person) => {
         response.json(person);
     })
 })
 
-app.delete('/api/persons/:id', (request, response) => {
-    PhoneBookEntry.findByIdAndRemove(request.params.id)
+app.delete('/api/persons/:id', (request, response, next) => {
+    phoneNumberEntry.findByIdAndRemove(request.params.id)
       .then((result) => {
         response.status(204).end()
       })
@@ -58,7 +58,7 @@ const generateID = () => {
   return ID;
 }
 
-app.post('/api/persons', (request, response) => {
+app.post('/api/persons', (request, response, next) => {
   const body = request.body;
 
   console.log(body);
@@ -76,27 +76,37 @@ app.post('/api/persons', (request, response) => {
   }
 
 
-  const newPerson = new PhoneBookEntry({
+  const newPerson = new phoneNumberEntry({
     id: generateID(),
     name: body.name,
     number: body.number,
   })
 
+  console.log(newPerson);
 
+  phoneNumberEntry
+    .exists({ name: newPerson.name})
+    .then(bool => {
+      if (bool) {
+          response.status(403).send({ error: `A person named ${newPerson.name} is already in the PhoneBook`})
+      } else {
+          newPerson.save()
+          .then((savedEntry) => {
+            response.json(savedEntry);
+          })
+          .catch((error) => next(error))
+        }
+    })
 
-  newPerson.save().then((savedEntry) => {
-    response.json(savedEntry);
-  })
 })
 
 app.put('/api/persons/:id', (request, response, next) => {
-  const body = request.body;
-  const phoneNumber = {
-    name: body.name,
-    number: body.number,
-  }
+  const { name, number } = request.body;
 
-  PhoneBookEntry.findByIdAndUpdate(request.params.id, phoneNumber, { new: true })
+  phoneNumberEntry.findByIdAndUpdate(
+    request.params.id, 
+    { name, number }, 
+    { new: true, runValidators: true, context: 'query' })
     .then(updatedNumber => {
       response.json(updatedNumber);
     })
@@ -114,6 +124,8 @@ const errorHandler = (error, request, response, next) => {
 
     if (error.name === 'CastError') {
         return response.status(400).send({ error: 'malformatted id' });
+    } else if (error.name === "ValidationError") {
+        return response.status(400).json({ error: error.message });
     }
 
     next(error);

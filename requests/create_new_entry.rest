@@ -1,7 +1,7 @@
-POST http://localhost:3005/api/persons
+POST http://ilgaming.xyz:3005/api/persons
 Content-Type: application/json
 
 {
-    "name": "Steve",
-    "number": "4567dagd8913-456"
+    "name": "Snatch",
+    "number": "12-5120512"
 }
